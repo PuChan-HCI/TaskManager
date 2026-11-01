@@ -145,6 +145,11 @@ headerbar .title { font-size: 14px; }
 .resource.high-load:checked { background: #632733; border-color: #ffa0a8; box-shadow: inset 0 -3px #ff6b78; }
 .resource.high-load .resource-title { color: #ffb1b8; }
 .resource.high-load .resource-number { color: #ffe0e3; }
+.widget-mode { border: 1px solid #33465f; }
+.widget-content { padding: 10px; }
+.widget-mode .resource { padding: 6px 9px; border-radius: 6px; }
+.widget-mode .resource-title { font-size: 9px; }
+.widget-mode .resource-number { font-size: 15px; letter-spacing: 0; }
 .status { border-radius: 20px; background: #14352e; color: #82dbb1; padding: 5px 12px; font-size: 11px; }
 .status.paused { background: #3b3020; color: #edc079; }
 button { color: #dce6f3; border-radius: 7px; }
@@ -299,6 +304,9 @@ class HistoryChart(Gtk.DrawingArea):
         cr.set_font_size(11)
         cr.move_to(10,18)
         cr.show_text(size(scale)+'/s (receive / send)' if self.resource == 'Network' else '100%')
+        if self.resource == 'GPU' and (not self.samples or self.samples[-1].get('GPU') is None):
+            cr.move_to(16, height/2)
+            cr.show_text('GPU utilization is unavailable')
 
 def core_color(index):
     return colorsys.hsv_to_rgb((index * .61803398875) % 1, .52, .96)
@@ -391,6 +399,9 @@ class TaskManager(Gtk.Application):
         self.paused = False
         self.resource = 'CPU'
         self.load_alerts = ResourceAlerts()
+        self.widget_mode = False
+        self.compact_window = None
+        self.mode_transition_pending = False
         self.connect('activate', self.activate)
 
     def activate(self, app):
@@ -421,6 +432,8 @@ class TaskManager(Gtk.Application):
             ('quit', lambda *_: self.quit(), '<Primary>q'),
             ('pause', lambda *_: self.toggle_pause(self.pause_button), '<Primary>p'),
             ('search', lambda *_: self.focus_search(), '<Primary>f'),
+            ('widget', lambda *_: self.set_widget_mode(not self.widget_mode), '<Primary>m'),
+            ('fullview', lambda *_: self.set_widget_mode(False), 'Escape'),
         ):
             action = Gio.SimpleAction.new(name, None)
             action.connect('activate', callback)
@@ -483,6 +496,8 @@ class TaskManager(Gtk.Application):
         window.present()
 
     def change_page(self, name):
+        if self.widget_mode:
+            self.set_widget_mode(False)
         if not self.navigation[name].get_active():
             self.navigation[name].set_active(True)
         self.stack.set_visible_child_name(name)
@@ -498,6 +513,73 @@ class TaskManager(Gtk.Application):
         else:
             self.status.remove_css_class('paused')
 
+    def graph_pressed(self, gesture, presses, x, y):
+        if presses == 2:
+            # Claim before the surrounding native window handle can maximize.
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            if not self.mode_transition_pending:
+                self.mode_transition_pending = True
+                GLib.idle_add(self.toggle_widget_idle)
+
+    def toggle_widget_idle(self):
+        self.mode_transition_pending = False
+        self.set_widget_mode(not self.widget_mode)
+        return False
+
+    def ensure_compact_window(self):
+        if self.compact_window is not None:
+            return
+        # Configure decorations before mapping: more reliable across window managers.
+        window = Gtk.ApplicationWindow(application=self, title='TaskManager', default_width=720, default_height=340)
+        window.set_decorated(False)
+        window.set_size_request(500, 220)
+        window.set_icon_name(APP_ID)
+        window.add_css_class('widget-mode')
+        window.connect('close-request', lambda *_: self.close_widget())
+        content = box(8)
+        content.add_css_class('widget-content')
+        self.widget_handle = Gtk.WindowHandle()
+        self.widget_handle.set_hexpand(True)
+        self.widget_handle.set_vexpand(True)
+        window.set_child(content)
+        self.compact_window, self.compact_content = window, content
+
+    def close_widget(self):
+        self.quit()
+        return False
+
+    def set_widget_mode(self, enabled):
+        if self.widget_mode == enabled:
+            return
+        if enabled:
+            self.ensure_compact_window()
+            self.normal_window_size = (self.window.get_width(), self.window.get_height())
+            self.widget_mode = True
+            self.performance_content.remove(self.resource_row)
+            self.performance_content.remove(self.chart)
+            self.compact_content.append(self.resource_row)
+            self.widget_handle.set_child(self.chart)
+            self.compact_content.append(self.widget_handle)
+            self.chart.set_content_height(150)
+            self.chart.set_vexpand(True)
+            self.window.set_visible(False)
+            self.compact_window.present()
+        else:
+            self.widget_mode = False
+            self.compact_window.set_visible(False)
+            self.compact_content.remove(self.resource_row)
+            self.widget_handle.set_child(None)
+            self.compact_content.remove(self.widget_handle)
+            self.performance_content.insert_child_after(self.resource_row, self.host_label)
+            self.performance_content.insert_child_after(self.chart, self.chart_title)
+            self.chart.set_content_height(240)
+            self.chart.set_vexpand(False)
+            self.window.set_default_size(*self.normal_window_size)
+            self.window.present()
+        if self.data:
+            self.render_performance()
+        self.chart.queue_draw()
+
     def show_about(self, button):
         dialog = Gtk.AboutDialog(transient_for=self.window, modal=True, program_name='TaskManager', version=VERSION,
                                  logo_icon_name=APP_ID, website='https://github.com/PuChan-HCI/TaskManager',
@@ -512,12 +594,14 @@ class TaskManager(Gtk.Application):
     def build_performance(self):
         scroll = Gtk.ScrolledWindow()
         content = box(18)
+        self.performance_content = content
         content.add_css_class('content')
         scroll.set_child(content)
         content.append(label('Performance', 'title'))
         self.host_label = label('', 'subtitle')
         content.append(self.host_label)
         resources = box(10, True)
+        self.resource_row = resources
         self.resource_buttons = {}
         self.resource_values = {}
         self.resource_titles = {}
@@ -551,6 +635,12 @@ class TaskManager(Gtk.Application):
         self.chart_title = label('CPU', 'value')
         content.append(self.chart_title)
         self.chart = HistoryChart()
+        self.chart.set_tooltip_text('Double-click for widget mode (Ctrl+M). Escape restores the full view.')
+        graph_click = Gtk.GestureClick.new()
+        graph_click.set_button(Gdk.BUTTON_PRIMARY)
+        graph_click.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        graph_click.connect('pressed', self.graph_pressed)
+        self.chart.add_controller(graph_click)
         content.append(self.chart)
         self.cpu_controls = box(12, True)
         self.cpu_controls.append(label('CPU history', 'subtitle'))
@@ -803,7 +893,7 @@ class TaskManager(Gtk.Application):
 
     def render(self):
         name = self.stack.get_visible_child_name()
-        if name == 'Performance':
+        if self.widget_mode or name == 'Performance':
             self.render_performance()
         elif name == 'Processes':
             self.render_processes()
@@ -837,7 +927,7 @@ class TaskManager(Gtk.Application):
         self.cpu_controls.set_visible(self.resource == 'CPU')
         self.core_section.set_visible(self.resource == 'CPU')
         chart_available = self.resource != 'GPU' or gpu.get('utilization') is not None
-        self.chart.set_visible(chart_available)
+        self.chart.set_visible(chart_available or self.widget_mode)
         self.history_caption.set_visible(chart_available)
         if not chart_available:
             self.chart_title.set_label('GPU')

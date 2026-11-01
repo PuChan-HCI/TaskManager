@@ -131,12 +131,25 @@ To run from the source folder without installing:
 
 Use the system Python rather than a Conda environment that may not provide GTK bindings. Close and reopen the application after updating it.
 
+### Simplified widget mode
+
+**Double-click the main resource graph** to switch to a compact, borderless widget. It displays only the resource tabs and the associated graph, hiding the title bar, sidebar, statistics, per-core cards, and tables.
+
+- Click a resource tab to switch the graph; live updates and red high-load indicators remain active.
+- Drag the graph to move the widget, using the desktop's native window-handle behavior.
+- Double-click the graph again, press **Escape**, or press **Ctrl+M** to restore the full interface.
+- **Ctrl+P** still pauses/resumes updates, and **Ctrl+Q** closes the application.
+
+Graph history is shared between the two views. Returning to the full interface restores the original main window and its size. A GPU with no available overall utilization counter shows an unavailable message rather than a zero reading.
+
 ### Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl+F` | Open Processes and focus the search field |
 | `Ctrl+P` | Pause or resume live updates |
+| `Ctrl+M` | Toggle simplified widget mode |
+| `Escape` | Return from widget mode to the full interface |
 | `Ctrl+Q` | Quit |
 
 ## Gallery
