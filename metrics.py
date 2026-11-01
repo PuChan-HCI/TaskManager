@@ -487,7 +487,13 @@ class Monitor:
             received, sent = int(values[0]), int(values[8])
             net_raw[name] = (received, sent)
             old = self.previous.get('net', {}).get(name, (received, sent))
-            networks.append({'name': name, 'received': received, 'sent': sent, 'rx': max(0, (received-old[0])/elapsed), 'tx': max(0, (sent-old[1])/elapsed), 'state': read(f'/sys/class/net/{name}/operstate', 'unknown')})
+            netpath = Path('/sys/class/net')/name
+            speed = number(read(netpath/'speed')) if (netpath/'device').exists() else None
+            speed = speed if speed is not None and speed > 0 else None
+            networks.append({'name': name, 'received': received, 'sent': sent,
+                             'rx': max(0, (received-old[0])/elapsed), 'tx': max(0, (sent-old[1])/elapsed),
+                             'state': read(netpath/'operstate', 'unknown'), 'speed_mbps': speed,
+                             'duplex': read(netpath/'duplex', 'unknown')})
         disks, disk_raw = [], {}
         for line in read('/proc/diskstats').splitlines():
             v = line.split()

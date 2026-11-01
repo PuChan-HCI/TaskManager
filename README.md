@@ -44,6 +44,8 @@ My goal is to bring CPU, system memory, available GPU memory and process telemet
 
 All **30 table columns** support ascending and descending sorting. Byte counts, rates, percentages, PIDs, and thread counts sort numerically, and the selected order remains active during live updates.
 
+Resource tabs turn **red** and display **HIGH** at **90% utilization**, returning to normal below **85%** to avoid flickering. CPU uses total utilization; Memory uses system memory in use; Disk uses the busiest device’s active time. GPU checks available utilization, engine activity, and reported GPU memory usage. Network alerts use the busiest physical interface with a known link speed; a missing capacity does not trigger an alert. Hover over a tab to see the measured load and thresholds.
+
 TaskManager collects read-only local telemetry. It does not run a web server, install a background service, or need administrator privileges to monitor your machine. The interface uses Cairo software rendering so that displaying GPU metrics does not depend on access to a GPU render device.
 
 ## Requirements

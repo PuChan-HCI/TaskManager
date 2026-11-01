@@ -18,6 +18,7 @@ for variable, required in (
 
 import threading
 import colorsys
+import math
 import shlex
 from pathlib import Path
 from collections import deque
@@ -62,6 +63,49 @@ def gpu_process_cells(process, host):
     return display, values
 
 
+class ResourceAlerts:
+    """High-load status with separate enter/clear thresholds to avoid flicker."""
+    ENTER = 90.0
+    CLEAR = 85.0
+
+    def __init__(self):
+        self.states = {}
+
+    def update(self, data, gpu):
+        def peak(values):
+            valid = [v for v in values if isinstance(v, (int, float)) and math.isfinite(v)]
+            return max(valid, default=None)
+        network = []
+        for interface in data.get('network', []):
+            speed = interface.get('speed_mbps')
+            if speed is None or speed <= 0 or interface.get('state') != 'up':
+                continue
+            traffic = interface['rx']+interface['tx'] if interface.get('duplex') == 'half' else max(interface['rx'], interface['tx'])
+            network.append(traffic*8/(speed*1e6)*100)
+        gpu_levels = [gpu.get('utilization'), *gpu.get('engines', {}).values()]
+        total, used = gpu.get('memory_total_mib'), gpu.get('memory_used_mib')
+        if total is not None and total > 0 and used is not None:
+            gpu_levels.append(used/total*100)
+        levels = {'CPU':data['cpu']['percent'], 'Memory':data['memory']['percent'],
+                  'GPU':peak(gpu_levels), 'Disk':peak([item['active'] for item in data.get('disks', [])]),
+                  'Network':peak(network)}
+        descriptions = {'CPU':'Total CPU utilization', 'Memory':'System memory in use',
+                        'GPU':'Highest GPU utilization, engine activity or reported GPU memory usage',
+                        'Disk':'Busiest disk active time', 'Network':'Busiest known physical link utilization'}
+        results = {}
+        for name, value in levels.items():
+            key = 'GPU:'+gpu.get('id', 'none') if name == 'GPU' else name
+            if value is None or not math.isfinite(value):
+                high = False
+                detail = descriptions[name]+': unavailable'
+            else:
+                high = value >= self.ENTER or (self.states.get(key, False) and value >= self.CLEAR)
+                detail = descriptions[name]+f': {value:.1f}%'
+            self.states[key] = high
+            results[name] = (high, detail+f'. High at {self.ENTER:g}%; clears below {self.CLEAR:g}%.')
+        return results
+
+
 def label(text='', css=None):
     widget = Gtk.Label(label=text, xalign=0)
     if css:
@@ -96,6 +140,11 @@ headerbar .title { font-size: 14px; }
 .resource:checked { background: #19324c; border-color: #71b2ff; }
 .resource-title { color: #9eafc4; font-size: 11px; font-weight: 600; }
 .resource-number { font-size: 23px; font-weight: 600; color: #e6edf3; letter-spacing: -0.5px; }
+.resource.high-load { background: #481e29; border-color: #ff6b78; }
+.resource.high-load:hover { background: #592432; border-color: #ff9ba3; }
+.resource.high-load:checked { background: #632733; border-color: #ffa0a8; box-shadow: inset 0 -3px #ff6b78; }
+.resource.high-load .resource-title { color: #ffb1b8; }
+.resource.high-load .resource-number { color: #ffe0e3; }
 .status { border-radius: 20px; background: #14352e; color: #82dbb1; padding: 5px 12px; font-size: 11px; }
 .status.paused { background: #3b3020; color: #edc079; }
 button { color: #dce6f3; border-radius: 7px; }
@@ -341,6 +390,7 @@ class TaskManager(Gtk.Application):
         self.syncing_gpu_selector = False
         self.paused = False
         self.resource = 'CPU'
+        self.load_alerts = ResourceAlerts()
         self.connect('activate', self.activate)
 
     def activate(self, app):
@@ -470,11 +520,14 @@ class TaskManager(Gtk.Application):
         resources = box(10, True)
         self.resource_buttons = {}
         self.resource_values = {}
+        self.resource_titles = {}
         first = None
         for name in ('CPU','Memory','GPU','Disk','Network'):
             button = Gtk.ToggleButton()
             tile = box(5)
-            tile.append(label(name.upper(), 'resource-title'))
+            title_label = label(name.upper(), 'resource-title')
+            tile.append(title_label)
+            self.resource_titles[name] = title_label
             value_label = label('—', 'resource-number')
             tile.append(value_label)
             button.set_child(tile)
@@ -742,6 +795,7 @@ class TaskManager(Gtk.Application):
                 self.last_timestamp = snapshot['timestamp']
                 self.sync_gpu_selector()
                 gpu = self.selected_gpu()
+                self.update_load_alerts(gpu)
                 self.chart.samples.append({'gpu_devices':{device['id']:device for device in snapshot['gpu']['devices']}, 'engines':gpu.get('engines', {}), 'cores':snapshot['cpu']['cores'], 'CPU':snapshot['cpu']['percent'], 'Memory':snapshot['memory']['percent'], 'GPU':gpu.get('utilization'), 'Disk':max([d['active'] for d in snapshot['disks']],default=0), 'rx':sum(n['rx'] for n in snapshot['network']), 'tx':sum(n['tx'] for n in snapshot['network'])})
                 self.status.set_label('Live · 1 second')
                 self.render()
@@ -756,11 +810,22 @@ class TaskManager(Gtk.Application):
         elif name == 'System':
             self.render_system()
 
+    def update_load_alerts(self, gpu):
+        for name, (high, description) in self.load_alerts.update(self.data, gpu).items():
+            button = self.resource_buttons[name]
+            if high:
+                button.add_css_class('high-load')
+            else:
+                button.remove_css_class('high-load')
+            self.resource_titles[name].set_label(name.upper()+(' · HIGH' if high else ''))
+            button.set_tooltip_text(description)
+
     def render_performance(self):
         d = self.data
         self.sync_gpu_selector()
         self.update_gpu_history()
         gpu = self.selected_gpu()
+        self.update_load_alerts(gpu)
         rx,tx = sum(n['rx'] for n in d['network']),sum(n['tx'] for n in d['network'])
         self.host_label.set_label(f"{d['host']}  /  {d['arch']}  /  {d['cpu']['count']} logical processors  ·  Live resource overview")
         values = {'CPU':percent(d['cpu']['percent']), 'Memory':percent(d['memory']['percent']), 'GPU':percent(gpu.get('utilization')) if gpu.get('utilization') is not None else ('Detected' if gpu else 'Not detected'), 'Disk':percent(max([x['active'] for x in d['disks']],default=0)), 'Network':size(rx+tx)+'/s'}
