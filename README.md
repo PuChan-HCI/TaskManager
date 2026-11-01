@@ -21,6 +21,14 @@ A native desktop performance monitor for CPU, memory, GPU, storage, network, and
 
 > The images currently shown are **labelled interface illustrations with demonstration data**, not native desktop screenshots. The layout and readings in a running installation can differ. The [capture command](#capture-native-screenshots) saves eight real screenshots from the actual GTK application.
 
+## Motivation
+
+I started TaskManager because `nvidia-smi` on my DGX Spark did not show GPU memory usage in the familiar way I was used to on Intel/AMD-based workstations with discrete NVIDIA GPUs. Working with the Spark and other ARM-based machines motivated me to build a clearer desktop view of system resources, GPU workloads, and the memory information that is actually available.
+
+DGX Spark uses unified memory shared by the CPU and GPU. NVIDIA documents that its overall `nvidia-smi` memory-usage field can report **Not Supported**, even when per-process GPU memory is listed. This depends on the memory architecture and driver support, rather than ARM alone. See [NVIDIA's DGX Spark memory-reporting guidance](https://docs.nvidia.com/dgx/dgx-spark/known-issues.html).
+
+My goal is to bring CPU, system memory, available GPU memory and process telemetry, storage, and network activity into one readable interface across DGX Spark and other Linux machines. GPU memory readings remain dependent on what the hardware and driver expose.
+
 ## Features
 
 | Workspace | What you can inspect |
