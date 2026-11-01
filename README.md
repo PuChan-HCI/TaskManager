@@ -79,7 +79,39 @@ To use another installation location:
 
 ## Run
 
-After installation, open your desktop's **applications menu**, search for **TaskManager**, and click its icon to launch it. You can launch the app this way without opening a terminal.
+### Launch from the applications menu
+
+After installation, you can open **TaskManager** like any other desktop application. You do **not** need to open a terminal, activate Conda, or keep the installer running.
+
+The steps below use **Ubuntu/GNOME**, as commonly used on DGX Spark. On another Linux desktop, open its application launcher and search for the same name.
+
+> **Visual guide:** the menu and search images below are clearly labelled GNOME-style illustrations, not screenshots captured from your desktop. The TaskManager window preview also uses demonstration data. Launcher position, theme, and labels can differ between desktop versions.
+
+**1. Open your desktop's application launcher.**
+
+Press the **Super** key (usually the Windows-logo key), or open **Activities**. You can start searching directly in the overview. To browse the full application list instead, click **Show Applications**, the grid-of-dots button in the dock.
+
+![Illustrated Ubuntu/GNOME overview and Show Applications button](docs/previews/launch-menu.png)
+
+**2. Search for TaskManager.**
+
+Type **TaskManager** in the overview or application search field. Look for the application named **TaskManager**, with the monitor-and-waveform icon shown below. This is the installed application entry.
+
+**3. Click the TaskManager icon.**
+
+Click the result to open the application. If it is the selected search result, you can also press **Enter**. The installer supplies the launcher path, so this method works even when `~/.local/bin` is not on your shell's `PATH`.
+
+![Illustrated TaskManager search result and application icon](docs/previews/launch-search.png)
+
+**4. Start monitoring.**
+
+The **Performance** workspace opens with live CPU charts. Select **CPU**, **Memory**, **GPU**, **Disk**, or **Network** to change the resource view. Use the sidebar for **Processes** and **System**. You can close the terminal used for installation; menu launches run independently of it.
+
+![TaskManager Performance window illustration after launching](docs/previews/cpu.png)
+
+**If the application is not listed:** clear any launcher search filter, close and reopen the overview, and search again. Confirm that the per-user installer completed under the same Linux account you are currently using. Run it again from the source folder if the desktop entry was not created. For Ubuntu/GNOME launcher behavior, see [GNOME's application-launching guide](https://help.gnome.org/gnome-help/shell-apps-open.html).
+
+### Launch from a terminal
 
 To launch from a terminal instead:
 
