@@ -71,8 +71,6 @@ cd TaskManager
 
 The installer copies the application into `~/.local/share/taskmanager`, creates `~/.local/bin/taskmanager`, and adds **TaskManager** to your applications menu. The menu entry uses an absolute launcher path, so it works even if `~/.local/bin` is not on `PATH`.
 
-Upgrading from the earlier **Spark Task Manager** installation? Run this installer from the updated source folder. It migrates the known application files and menu entry to the new name. The launch command becomes `taskmanager`.
-
 To use another installation location:
 
 ```bash
@@ -81,7 +79,9 @@ To use another installation location:
 
 ## Run
 
-Open **TaskManager** from your applications menu, or run:
+After installation, open your desktop's **applications menu**, search for **TaskManager**, and click its icon to launch it. You can launch the app this way without opening a terminal.
+
+To launch from a terminal instead:
 
 ```bash
 ~/.local/bin/taskmanager
@@ -231,8 +231,6 @@ For an alternate installation prefix, pass the same `--prefix` used during insta
 **Empty GPU process table:** the GPU may be idle, process monitoring may be unsupported, or access may be restricted. Missing values remain `—`.
 
 **Command not found:** run `~/.local/bin/taskmanager`, or add `~/.local/bin` to your shell's `PATH`.
-
-**Old application still visible:** close the previous application and run the new installer. It removes recognized per-user files from the old Spark Task Manager installation.
 
 ## Development
 
