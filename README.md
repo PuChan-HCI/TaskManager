@@ -6,7 +6,7 @@
 
 **A clear view of your Linux system.**
 
-A native desktop performance monitor for CPU, memory, GPU, storage, network, and running processes. Built with GTK4 and Python, with live charts and an nvtop-style GPU process table.
+A native desktop performance monitor for CPU, memory, GPU, storage, network, and running processes. Built with GTK4 and Python, with live charts, an nvtop-style GPU process table, and a borderless widget mode that keeps just the resource tabs and selected graph visible.
 
 [![Platform: Linux](https://img.shields.io/badge/platform-Linux-5396de)](#requirements)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab)](#requirements)
@@ -19,7 +19,7 @@ A native desktop performance monitor for CPU, memory, GPU, storage, network, and
 
 ![TaskManager CPU interface preview](docs/previews/cpu.png)
 
-> The images currently shown are **labelled interface illustrations with demonstration data**, not native desktop screenshots. The layout and readings in a running installation can differ. The [capture command](#capture-native-screenshots) saves eight real screenshots from the actual GTK application.
+> The images currently shown are **labelled interface illustrations with demonstration data**, not native desktop screenshots. The layout and readings in a running installation can differ. The [capture command](#capture-native-screenshots) saves nine real screenshots from the actual GTK application.
 
 ## Motivation
 
@@ -41,6 +41,7 @@ My goal is to bring CPU, system memory, available GPU memory and process telemet
 | **Network** | Receive/send histories and an interface table with link status, rates, and cumulative traffic. |
 | **Processes** | Search by name or PID, application icons, CPU and resident memory, thread counts, and process states. |
 | **System** | Host, architecture, kernel, memory, storage, GPU driver, and available thermal sensors. |
+| **Widget mode** | Double-click the main graph for a compact, borderless view containing only resource tabs and the selected graph. Live updates and load alerts stay active. |
 
 All **30 table columns** support ascending and descending sorting. Byte counts, rates, percentages, PIDs, and thread counts sort numerically, and the selected order remains active during live updates.
 
@@ -140,6 +141,10 @@ Use the system Python rather than a Conda environment that may not provide GTK b
 - Double-click the graph again, press **Escape**, or press **Ctrl+M** to restore the full interface.
 - **Ctrl+P** still pauses/resumes updates, and **Ctrl+Q** closes the application.
 
+![TaskManager simplified widget mode illustration with only resource tabs and CPU graph](docs/previews/widget.png)
+
+*Widget mode preview with demonstration data. The window has no title bar, sidebar, statistics cards, or tables.*
+
 Graph history is shared between the two views. Returning to the full interface restores the original main window and its size. A GPU with no available overall utilization counter shows an unavailable message rather than a zero reading.
 
 ### Keyboard shortcuts
@@ -154,7 +159,7 @@ Graph history is shared between the two views. Returning to the full interface r
 
 ## Gallery
 
-The following eight images are interface previews, each explicitly marked as demonstration data. Native captures can be generated with the command below.
+The following nine images are interface previews, each explicitly marked as demonstration data. Native captures can be generated with the command below.
 
 ### CPU: from total load to individual cores
 
@@ -204,6 +209,12 @@ Application icons make the process list easier to scan. Click any column header 
 
 A compact grid brings together platform information and available thermal sensors.
 
+### Widget mode: a compact desktop monitor
+
+![TaskManager borderless widget mode interface illustration](docs/previews/widget.png)
+
+Double-click the main graph to keep just the tabs and resource history visible. Switch resources using the tabs, drag the graph to move the widget, and double-click again or press **Escape** to return to the full interface. History and red high-load indicators remain active.
+
 ### Capture native screenshots
 
 From a terminal in your **graphical desktop session**, run:
@@ -213,7 +224,7 @@ cd TaskManager
 /usr/bin/python3 capture_screenshots.py
 ```
 
-This opens the real application, visits each workspace, saves **eight PNG screenshots** into `docs/screenshots`, and exits. It uses the GTK widget tree and the active renderer; it does not generate mock windows. Captures contain live machine data. Use `--output /your/folder` to choose another directory.
+This opens the real application, visits each workspace, saves **nine PNG screenshots** into `docs/screenshots`, and exits. The captures include the compact widget window as well as the full workspaces. It uses the GTK widget tree and the active renderer; it does not generate mock windows. Captures contain live machine data. Use `--output /your/folder` to choose another directory.
 
 The current preview illustrations can be regenerated independently with:
 

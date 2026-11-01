@@ -60,6 +60,7 @@ class CaptureApp(TaskManager):
             ('network', 'Performance', 'Network', True),
             ('processes', 'Processes', None, False),
             ('system', 'System', None, False),
+            ('widget', 'Performance', 'CPU', False),
         ])
         self.failed = False
 
@@ -72,22 +73,24 @@ class CaptureApp(TaskManager):
         try:
             name, page, resource, bottom = next(self.targets)
         except StopIteration:
-            print(f'Captured 8 native screenshots in {self.output}', flush=True)
+            print(f'Captured 9 native screenshots in {self.output}', flush=True)
             self.quit()
             return False
         self.change_page(page)
         if resource:
             self.resource_buttons[resource].set_active(True)
+        if name == 'widget':
+            self.set_widget_mode(True)
         def scroll_and_capture():
             widget = self.stack.get_visible_child()
-            if isinstance(widget, Gtk.ScrolledWindow):
+            if not self.widget_mode and isinstance(widget, Gtk.ScrolledWindow):
                 adjustment = widget.get_vadjustment()
                 adjustment.set_value(max(0, adjustment.get_upper()-adjustment.get_page_size()) if bottom else 0)
             GLib.timeout_add(600, capture)
             return False
         def capture():
             try:
-                save_window(self.window, self.output/(name+'.png'))
+                save_window(self.compact_window if self.widget_mode else self.window, self.output/(name+'.png'))
                 print('Saved '+name+'.png', flush=True)
             except Exception as exc:
                 print('Capture failed: '+str(exc), file=sys.stderr)

@@ -162,5 +162,28 @@ def render(name):
     surface.write_to_png(str(OUT/(name+'.png')))
     print(OUT/(name+'.png'))
 
+def render_widget():
+    global cr
+    surface=cairo.ImageSurface(cairo.FORMAT_ARGB32,1000,520)
+    cr=cairo.Context(surface)
+    rect(0,0,1000,520,'#0b0f15')
+    text(140,45,'SIMPLIFIED WIDGET MODE',18,BLUE,True)
+    text(140,73,'Interface illustration - demonstration data, not a desktop capture',11,MUTED)
+    x,y,w,h=140,108,720,340
+    rect(x,y,w,h,BG,0,'#33465f')
+    for i,(name,value) in enumerate([('CPU','34.2%'),('MEMORY','39.7%'),('GPU','47.3%'),('DISK','12.4%'),('NETWORK','2.1 MiB/s')]):
+        tx=x+10+i*140
+        rect(tx,y+10,130,61,'#19324c' if i==0 else PANEL,6,BLUE if i==0 else LINE)
+        text(tx+9,y+29,name,9,MUTED,True)
+        text(tx+9,y+54,value,15,TEXT,True)
+    cr.save();cr.translate(x+10,y+79);cr.rectangle(0,0,700,251);cr.clip()
+    draw_cpu_history(cr,700,251,samples)
+    cr.restore()
+    text(140,487,'Double-click the graph or press Escape to restore the full interface.',12,MUTED)
+    OUT.mkdir(parents=True,exist_ok=True)
+    surface.write_to_png(str(OUT/'widget.png'))
+    print(OUT/'widget.png')
+
 if __name__=='__main__':
     for name in ['cpu','memory','gpu','gpu-processes','disk','network','processes','system']:render(name)
+    render_widget()
