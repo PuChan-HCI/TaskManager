@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TaskManager
+Comment=Monitor CPU, memory, Intel/AMD/NVIDIA GPUs, disks and network
+Exec=taskmanager
+Icon=io.github.PuChanHCI.TaskManager
+Terminal=false
+Categories=System;Monitor;
+Keywords=task;manager;cpu;gpu;memory;network;Linux;
+StartupNotify=true
+StartupWMClass=io.github.PuChanHCI.TaskManager
